@@ -144,7 +144,7 @@ func (cdnc *CDNController) findNearestRegion(regions []*model.Region, geo *util.
 			return nil, err
 		}
 
-		distance := util.Haversine(geo.Latitude, geo.Longitude, serverGeo.Latitude, serverGeo.Longitude)
+		distance := util.Distance(geo.Latitude, geo.Longitude, serverGeo.Latitude, serverGeo.Longitude)
 		if distance < minDistance {
 			minDistance = distance
 			nearestRegion = r
