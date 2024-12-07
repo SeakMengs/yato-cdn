@@ -12,6 +12,24 @@ type FileRepository struct {
 	*baseRepository
 }
 
+func (fr *FileRepository) GetByName(ctx context.Context, tx *gorm.DB, name string) (*model.File, error) {
+	fr.logger.Debugf("Get file by name: %s \n", name)
+
+	db := fr.getDB(tx)
+	var file *model.File
+
+	ctx, cancel := context.WithTimeout(ctx, constant.QUERY_TIMEOUT_DURATION)
+	defer cancel()
+
+	if err := db.WithContext(ctx).Model(&model.File{}).Where(&model.File{
+		Name: name,
+	}).First(&file).Error; err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
 func (fr *FileRepository) GetAll(ctx context.Context, tx *gorm.DB) ([]*model.File, error) {
 	fr.logger.Debugf("Get all files: %s \n")
 

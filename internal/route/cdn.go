@@ -9,7 +9,7 @@ func V1_CDN(r *gin.RouterGroup, cdnController *controller.CDNController) {
 	v1 := r.Group("/v1/cdn")
 	{
 		// Test endpoint with curl: curl --output - -X GET http://localhost:8080/api/v1/cdn/your file name
-		// v1.GET("/:filename", cdnController)
+		v1.GET("/:filename", cdnController.ServeFile)
 		// Test endpoint with curl: curl -X POST -F "file=@path/to/your/file" http://localhost:8080/api/v1/cdn/upload
 		v1.POST("/upload", cdnController.UploadFile)
 	}

@@ -9,6 +9,7 @@ type Region struct {
 	ID     string `gorm:"type:text;primaryKey" json:"id"`
 	Name   string `gorm:"type:text;not null;" json:"name" form:"name" binding:"required"`
 	Domain string `gorm:"type:text;not null;" json:"domain" form:"domain" binding:"required"`
+	IP     string `gorm:"type:text;not null;" json:"ip" form:"ip" binding:"required"`
 
 	BaseModel
 }

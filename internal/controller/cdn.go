@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"sync"
@@ -130,4 +131,71 @@ func (cdnc *CDNController) UploadFile(ctx *gin.Context) {
 
 	fileUrl := fmt.Sprintf("%s%s%s", ctx.Request.Host, CDN_SERVE_FILE_API, _file.Filename)
 	util.ResponseSuccess(ctx, gin.H{"message": "File uploaded successfully", "file": fileUrl})
+}
+
+func (cdnc *CDNController) findNearestRegion(regions []*model.Region, geo *util.GeoLocation) (*model.Region, error) {
+	var nearestRegion *model.Region
+	minDistance := math.MaxFloat64
+
+	for _, r := range regions {
+		serverGeo, err := util.FindGeoLocation(r.IP)
+		if err != nil {
+			cdnc.app.Logger.Debugf("Error getting geo location: %v\n", err)
+			return nil, err
+		}
+
+		distance := util.Haversine(geo.Latitude, geo.Longitude, serverGeo.Latitude, serverGeo.Longitude)
+		if distance < minDistance {
+			minDistance = distance
+			nearestRegion = r
+			cdnc.app.Logger.Debugf("Server region is %s, set in db is %s", serverGeo.Region, r.Name)
+		}
+	}
+
+	return nearestRegion, nil
+}
+
+func (cdnc *CDNController) ServeFile(ctx *gin.Context) {
+	if !cdnc.CDN.IsCDN {
+		util.ResponseFailed(ctx, http.StatusBadRequest, "This server is being serve as an edge server", nil, nil)
+	}
+	filename := ctx.Param("filename")
+
+	_, err := cdnc.app.Repository.File.GetByName(ctx, nil, filename)
+	if err != nil {
+		util.ResponseFailed(ctx, http.StatusNotFound, "File not found", err, nil)
+		return
+	}
+
+	clientIp := ctx.ClientIP()
+	// clientIp = "34.82.2.21" // US IP test, expect near US server
+	// clientIp = "189.202.84.129" // Mexico IP test, expect near US server
+	// clientIp = "203.113.152.18" // Vietnam IP test, expect near Korea server
+	// clientIp = "110.74.193.124" // Cambodia IP test, expect near Singapore server
+	// clientIp = "119.28.48.45" // Japan IP test, expect near Korea server
+	// clientIp = "14.207.161.4" // Thailand IP test, expect near Singapore server
+
+	cdnc.app.Logger.Debugf("Find geolocation for client %s\n", clientIp)
+	clientGeo, err := util.FindGeoLocation(clientIp)
+	if err != nil {
+		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to get client geo location", err, nil)
+		return
+	}
+
+	regions, err := cdnc.app.Repository.Region.GetAll(ctx, nil)
+	if err != nil {
+		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to retrieve region informations", err, nil)
+		return
+	}
+
+	nearestRegion, err := cdnc.findNearestRegion(regions, clientGeo)
+	cdnc.app.Logger.Debugf("Nearest region found: %s, %s for client %s, %s\n", nearestRegion.Name, nearestRegion.IP, clientGeo.Region, clientIp)
+	if err != nil {
+		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to find nearest region", err, nil)
+		return
+	}
+
+	url := fmt.Sprintf("%s%s%s", nearestRegion.Domain, FILE_SERVE_FILE_API, filename)
+	cdnc.app.Logger.Debugf("Redirecting to %s\n", url)
+	ctx.Redirect(http.StatusTemporaryRedirect, url)
 }
