@@ -10,16 +10,26 @@ type baseRepository struct {
 	logger *zap.SugaredLogger
 }
 
-type Repository struct{}
+type Repository struct {
+	File   *FileRepository
+	Region *RegionRepository
+}
 
 func newBaseRepository(db *gorm.DB, logger *zap.SugaredLogger) *baseRepository {
 	return &baseRepository{db: db, logger: logger}
 }
 
 func NewRepository(db *gorm.DB, logger *zap.SugaredLogger) *Repository {
-	// br := newBaseRepository(db, logger)
+	br := newBaseRepository(db, logger)
 
-	return &Repository{}
+	return &Repository{
+		File: &FileRepository{
+			baseRepository: br,
+		},
+		Region: &RegionRepository{
+			baseRepository: br,
+		},
+	}
 }
 
 // Example usage can be found in user repository: GetUserAndCreate

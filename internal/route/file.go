@@ -1,15 +1,17 @@
 package route
 
 import (
+	"github.com/SeakMengs/yato-cdn/internal/controller"
 	"github.com/gin-gonic/gin"
 )
 
-func V1_File(r *gin.RouterGroup) {
-	// v1 := r.Group("/v1/users")
-	// {
-	// 	// Test endpoint with curl: curl http://localhost:8080/api/v1/users/1
-	// 	v1.GET("/:user_id", userController.GetUserById)
-	// 	// Test endpoint with curl: curl -X POST http://localhost:8080/api/v1/users/register
-	// 	v1.POST("/register", userController.RegisterUser)
-	// }
+func V1_File(r *gin.RouterGroup, fileController *controller.FileController) {
+	v1 := r.Group("/v1/files")
+	{
+		v1.GET("/", fileController.GetAllFileNames)
+		// Test endpoint with curl: curl --output - -X GET http://localhost:8080/api/v1/files/your file name
+		v1.GET("/:filename", fileController.ReadFile)
+		// Test endpoint with curl: curl -X POST -F "file=@path/to/your/file" http://localhost:8080/api/v1/files/upload
+		v1.POST("/upload", fileController.UploadFile)
+	}
 }

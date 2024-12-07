@@ -10,6 +10,7 @@ type baseController struct {
 
 type Controller struct {
 	Index *IndexController
+	File  *FileController
 }
 
 func newBaseController(app *appcontext.Application) *baseController {
@@ -21,5 +22,6 @@ func NewController(app *appcontext.Application) *Controller {
 
 	return &Controller{
 		Index: &IndexController{baseController: bc},
+		File:  &FileController{baseController: bc},
 	}
 }

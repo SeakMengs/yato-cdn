@@ -26,7 +26,7 @@ func main() {
 
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS citext`)
 
-	migrateErr := db.AutoMigrate(&model.User{}, &model.Token{}, &model.OAuthProvider{})
+	migrateErr := db.AutoMigrate(&model.File{}, &model.Region{})
 	if migrateErr != nil {
 		logger.Panic(migrateErr)
 	}

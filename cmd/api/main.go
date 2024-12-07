@@ -60,8 +60,8 @@ func main() {
 	r.GET("/", _controller.Index.Index)
 
 	rApi := r.Group("/api")
-
-	route.V1_File(rApi)
+	route.V1_Index(rApi, _controller.Index)
+	route.V1_File(rApi, _controller.File)
 
 	if err := r.Run("0.0.0.0:" + app.Config.Port); err != nil {
 		logger.Panic("Error running server: %v \n", err)
