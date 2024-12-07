@@ -1,0 +1,15 @@
+meta {
+  name: cdn upload file
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{url}}/api/v1/cdn/upload
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file()
+}

@@ -12,6 +12,12 @@ type Config struct {
 	ENV         string
 	DB          DatabaseConfig
 	RateLimiter RateLimiterConfig
+	CDN         CDN
+}
+
+type CDN struct {
+	IsCDN  bool
+	Region string
 }
 
 type RateLimiterConfig struct {
@@ -59,6 +65,10 @@ func GetConfig() Config {
 			RequestsPerTimeFrame: env.GetInt("RATE_LIMIT_REQUESTS_PER_TIME_FRAME", 5000),
 			TimeFrame:            rateLimiteTimeFrame,
 			Enabled:              env.GetBool("RATE_LIMIT_ENABLED", true),
+		},
+		CDN: CDN{
+			IsCDN:  env.GetBool("IS_CDN", false),
+			Region: env.GetString("REGION", "universal"),
 		},
 	}
 }

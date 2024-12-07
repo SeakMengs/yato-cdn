@@ -18,11 +18,11 @@ func (ic IndexController) Index(ctx *gin.Context) {
 }
 
 func (ic *IndexController) GetAllRegions(ctx *gin.Context) {
-	fn, err := ic.app.Repository.Region.GetAll(ctx, nil)
+	regions, err := ic.app.Repository.Region.GetAll(ctx, nil)
 	if err != nil {
 		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to retrieve region informations", err, nil)
 		return
 	}
 
-	util.ResponseSuccess(ctx, fn)
+	util.ResponseSuccess(ctx, regions)
 }
