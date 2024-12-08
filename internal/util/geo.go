@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -61,6 +63,41 @@ func FindDomainIp(domain string) string {
 	fmt.Printf("ip address of %s: %s\n", domain, ip)
 
 	return ip
+}
+
+func GetClientIP(ctx *gin.Context) string {
+	// Check X-Forwarded-For header
+	xForwardedFor := ctx.GetHeader("X-Forwarded-For")
+	if xForwardedFor != "" {
+		// Split the list of IPs in case there are multiple
+		ips := strings.Split(xForwardedFor, ",")
+		// Return the first valid IP
+		for _, ip := range ips {
+			ip = strings.TrimSpace(ip)
+			if isValidIP(ip) {
+				return ip
+			}
+		}
+	}
+
+	// Check X-Real-IP header
+	xRealIP := ctx.GetHeader("X-Real-IP")
+	if xRealIP != "" && isValidIP(xRealIP) {
+		return xRealIP
+	}
+
+	// Fallback to remote address
+	remoteIP, _, err := net.SplitHostPort(ctx.Request.RemoteAddr)
+	if err == nil && isValidIP(remoteIP) {
+		return remoteIP
+	}
+
+	return ctx.ClientIP()
+}
+
+func isValidIP(ip string) bool {
+	parsedIP := net.ParseIP(ip)
+	return parsedIP != nil
 }
 
 //	func FindGeoLocation(ip string) (*GeoLocation, error) {

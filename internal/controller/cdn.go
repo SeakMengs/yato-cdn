@@ -161,13 +161,14 @@ func (cdnc *CDNController) ServeFile(ctx *gin.Context) {
 	}
 	filename := ctx.Param("filename")
 
-	_, err := cdnc.app.Repository.File.GetByName(ctx, nil, filename)
+	fileInfo, err := cdnc.app.Repository.File.GetByName(ctx, nil, filename)
 	if err != nil {
 		util.ResponseFailed(ctx, http.StatusNotFound, "File not found", err, nil)
 		return
 	}
 
-	clientIp := ctx.ClientIP()
+	// clientIp := ctx.ClientIP()
+	clientIp := util.GetClientIP(ctx)
 	// clientIp = "34.82.2.21" // US IP test, expect near US server
 	// clientIp = "189.202.84.129" // Mexico IP test, expect near US server
 	// clientIp = "203.113.152.18" // Vietnam IP test, expect near Korea server
@@ -195,7 +196,12 @@ func (cdnc *CDNController) ServeFile(ctx *gin.Context) {
 		return
 	}
 
+	redirect := ctx.Query("redirect")
 	url := fmt.Sprintf("%s%s%s", nearestRegion.Domain, FILE_SERVE_FILE_API, filename)
-	cdnc.app.Logger.Debugf("Redirecting to %s\n", url)
-	ctx.Redirect(http.StatusTemporaryRedirect, url)
+	if redirect == "1" {
+		cdnc.app.Logger.Debugf("Redirecting to %s\n", url)
+		ctx.Redirect(http.StatusTemporaryRedirect, url)
+	}
+
+	util.ResponseSuccess(ctx, gin.H{"message": "File served successfully", "id": fileInfo.ID, "name": fileInfo.Name, "url": url, "region": nearestRegion.Name, "clientIP": clientIp})
 }

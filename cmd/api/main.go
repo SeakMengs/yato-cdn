@@ -60,6 +60,7 @@ func main() {
 	r.GET("/", _controller.Index.Index)
 
 	rApi := r.Group("/api")
+
 	route.V1_Index(rApi, _controller.Index)
 	route.V1_File(rApi, _controller.File)
 	route.V1_CDN(rApi, _controller.CDN)
