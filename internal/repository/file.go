@@ -60,3 +60,19 @@ func (fr *FileRepository) Save(ctx context.Context, tx *gorm.DB, newFile model.F
 
 	return nil
 }
+
+func (fr *FileRepository) DeleteByName(ctx context.Context, tx *gorm.DB, name string) error {
+	fr.logger.Debugf("Delete file by name: %s \n", name)
+
+	db := fr.getDB(tx)
+
+	ctx, cancel := context.WithTimeout(ctx, constant.QUERY_TIMEOUT_DURATION)
+	defer cancel()
+	if err := db.WithContext(ctx).Model(&model.File{}).Where(&model.File{
+		Name: name,
+	}).Delete(&model.File{}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}

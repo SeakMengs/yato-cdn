@@ -61,7 +61,7 @@ func (fc *FileController) UploadFile(ctx *gin.Context) {
 	util.ResponseSuccess(ctx, gin.H{"message": "File uploaded successfully", "file": fileUrl})
 }
 
-func (fc FileController) ReadFile(ctx *gin.Context) {
+func (fc *FileController) ReadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 	dst := fmt.Sprintf(STORAGE_PATH, fc.CDN.Region, filename)
 
@@ -82,4 +82,19 @@ func (fc FileController) ReadFile(ctx *gin.Context) {
 		fc.app.Logger.Debugf("Failed to serve file. err: %v", err)
 		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to serve file", err, nil)
 	}
+}
+
+func (fc *FileController) DeleteFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+
+	dst := fmt.Sprintf(STORAGE_PATH, fc.CDN.Region, filename)
+
+	err := file.Delete(dst)
+	if err != nil {
+		fc.app.Logger.Debugf("Failed to delete file. err: %v", err)
+		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to delete file", err, nil)
+		return
+	}
+
+	util.ResponseSuccess(ctx, gin.H{"message": "File deleted successfully"})
 }

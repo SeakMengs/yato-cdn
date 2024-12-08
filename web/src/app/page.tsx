@@ -54,6 +54,7 @@ export default function Dashboard() {
           success={uploadSuccess}
         />
         <FileList
+          refetchFiles={refetchFiles}
           regions={regions}
           files={files}
           loading={filesLoading}

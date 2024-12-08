@@ -21,8 +21,9 @@ type CDNController struct {
 }
 
 const (
-	REGION_UPLOAD_API  = "/api/v1/files/upload"
-	CDN_SERVE_FILE_API = "/api/v1/cdn/"
+	REGION_UPLOAD_API     = "/api/v1/files/upload"
+	CDN_SERVE_FILE_API    = "/api/v1/cdn/"
+	REGION_SERVE_FILE_API = "/api/v1/files/"
 )
 
 func (cdnc *CDNController) distributeFile(file *multipart.FileHeader, domain string, wg *sync.WaitGroup) {
@@ -83,11 +84,77 @@ func (cdnc *CDNController) distributeFile(file *multipart.FileHeader, domain str
 	body.ReadFrom(resp.Body)
 	cdnc.app.Logger.Debugf("Response body of %s: %s\n", domain, body.String())
 
-	// Check the response status
 	if resp.StatusCode != http.StatusOK {
 		cdnc.app.Logger.Debugf("Failed to upload file, status code: %d\n", resp.StatusCode)
 		return
 	}
+}
+
+func (cdnc *CDNController) removeFileByRegion(filename string, domain string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	// Same serve file route but delete method
+	url := fmt.Sprintf("%s%s%s", domain, REGION_SERVE_FILE_API, filename)
+	cdnc.app.Logger.Debugf("Remove file from %s", url)
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		cdnc.app.Logger.Debugf("Error creating request: %v\n", err)
+		return
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		cdnc.app.Logger.Debugf("Error sending request: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body := &bytes.Buffer{}
+	body.ReadFrom(resp.Body)
+	cdnc.app.Logger.Debugf("Response body of %s: %s\n", domain, body.String())
+
+	if resp.StatusCode != http.StatusOK {
+		cdnc.app.Logger.Debugf("Failed to delete file, status code: %d\n", resp.StatusCode)
+		return
+	}
+}
+
+func (cdnc *CDNController) DeleteFile(ctx *gin.Context) {
+	if !cdnc.CDN.IsCDN {
+		util.ResponseFailed(ctx, http.StatusBadRequest, "This server is being serve as an edge server", nil, nil)
+	}
+	filename := ctx.Param("filename")
+
+	_, err := cdnc.app.Repository.File.GetByName(ctx, nil, filename)
+	if err != nil {
+		util.ResponseFailed(ctx, http.StatusNotFound, "File not found", err, nil)
+		return
+	}
+
+	regions, err := cdnc.app.Repository.Region.GetAll(ctx, nil)
+	if err != nil {
+		cdnc.app.Logger.Debugf("Error getting regions: %v\n", err)
+		util.ResponseFailed(ctx, http.StatusInternalServerError, "Failed to retrieve region informations", err, nil)
+		return
+	}
+
+	wg := sync.WaitGroup{}
+
+	for _, r := range regions {
+		wg.Add(1)
+		go cdnc.removeFileByRegion(filename, r.Domain, &wg)
+	}
+
+	wg.Wait()
+
+	err = cdnc.app.Repository.File.DeleteByName(ctx, nil, filename)
+	if err != nil {
+		util.ResponseFailed(ctx, http.StatusNotFound, "File not found", err, nil)
+		return
+	}
+
+	util.ResponseSuccess(ctx, gin.H{"message": "File deleted successfully"})
 }
 
 func (cdnc *CDNController) UploadFile(ctx *gin.Context) {

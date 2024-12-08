@@ -13,12 +13,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useFetch } from "@/hooks/useFetch";
 import { CDN_URL } from "@/util";
+import { useFileDelete } from "@/hooks/useFileDelete";
+import { Button } from "@/components/ui/button";
+import { TrashIcon } from "lucide-react";
+import { useEffect } from "react";
 
 interface FileListProps {
   regions: Region[] | null;
   files: File[] | null;
   loading: boolean;
   error: Error | null;
+  refetchFiles: () => Promise<void>;
 }
 
 interface CDNFile {
@@ -28,7 +33,13 @@ interface CDNFile {
   url: string;
 }
 
-export function FileList({ files, loading, error, regions }: FileListProps) {
+export function FileList({
+  files,
+  loading,
+  error,
+  regions,
+  refetchFiles,
+}: FileListProps) {
   if (loading) {
     return (
       <div>
@@ -55,12 +66,18 @@ export function FileList({ files, loading, error, regions }: FileListProps) {
               Region Served From{" "}
             </TableHead>
             <TableHead>Available in Regions</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {files &&
             files.map((file) => (
-              <CDNFileRow key={file.id} file={file} regions={regions} />
+              <CDNFileRow
+                key={file.id}
+                file={file}
+                regions={regions}
+                refetchFiles={refetchFiles}
+              />
             ))}
         </TableBody>
       </Table>
@@ -71,7 +88,9 @@ export function FileList({ files, loading, error, regions }: FileListProps) {
 function CDNFileRow({
   file,
   regions,
+  refetchFiles,
 }: {
+  refetchFiles: () => Promise<void>;
   file: File;
   regions: Region[] | null;
 }) {
@@ -82,6 +101,13 @@ function CDNFileRow({
     loading: filesLoading,
     error: filesError,
   } = useFetch<CDNFile>(`${CDN_SERVEFILE}${file.name}`);
+  const { deleteFile, deleteSuccess, deleting } = useFileDelete();
+
+  useEffect(() => {
+    if (deleteSuccess) {
+      refetchFiles();
+    }
+  }, [deleteSuccess]);
 
   function getCDNUrl(name: string) {
     return `${CDN_URL}${CDN_SERVEFILE}${name}`;
@@ -110,7 +136,7 @@ function CDNFileRow({
   if (filesError) {
     return (
       <TableRow>
-        <TableCell colSpan={4} className="text-red-500">
+        <TableCell colSpan={5} className="text-red-500">
           Error loading files
         </TableCell>
       </TableRow>
@@ -120,7 +146,7 @@ function CDNFileRow({
   if (!cdnFile) {
     return (
       <TableRow>
-        <TableCell colSpan={4}>No CDN file found</TableCell>
+        <TableCell colSpan={5}>No CDN file found</TableCell>
       </TableRow>
     );
   }
@@ -160,6 +186,18 @@ function CDNFileRow({
               </div>
             ))}
         </div>
+      </TableCell>
+      <TableCell>
+        <Button
+          size={"icon"}
+          className="bg-red-500"
+          onClick={() => {
+            deleteFile(cdnFile.name);
+          }}
+        >
+          <TrashIcon className="h4 w-4" />
+        </Button>
+        {deleting ? "Deleting..." : ""}
       </TableCell>
     </TableRow>
   );

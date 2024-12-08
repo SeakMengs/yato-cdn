@@ -6,7 +6,6 @@ This project use the following tools:
 - Gorm as the ORM
 - Postgresql as the database
 - Rate limit using fixed window algorithm
-- Mailer using Sendgrid
 
 # Develop
 
